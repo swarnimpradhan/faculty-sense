@@ -1,7 +1,42 @@
 import type { Faculty, Schedule, AttendanceLog, LeaveRecord, User } from '../types';
 import { generate512dEmbedding } from '../utils/biometricsEngine';
+import trainedBiometrics from './biometrics_trained.json';
 
 export const INITIAL_FACULTY: Faculty[] = [
+  {
+    id: 'FAC-2001',
+    name: 'Prof. Swarnim Pradhan',
+    department: 'Computer Science & IT',
+    designation: 'Lead AI Research Engineer & Director',
+    office_location: 'Block I, AI & Biometrics Lab 501',
+    contact_info: {
+      email: 'swarnim.pradhan@christuniversity.in',
+      phone: '+91 98450 99001'
+    },
+    face_embedding: trainedBiometrics.swarnim,
+    avatarUrl: '/dataset/Swarnim/1.jpeg',
+    status: 'Active',
+    joiningDate: '2017-07-10',
+    enrolledAt: '2026-02-01T08:00:00Z',
+    samplePhotosCount: 5
+  },
+  {
+    id: 'FAC-2002',
+    name: 'Prof. Stephen',
+    department: 'Electronics & Communication',
+    designation: 'Associate Director of Biometrics & Perception',
+    office_location: 'Block III, Vision Systems Lab 310',
+    contact_info: {
+      email: 'stephen@christuniversity.in',
+      phone: '+91 98450 99002'
+    },
+    face_embedding: trainedBiometrics.stephen,
+    avatarUrl: '/dataset/Stephen/1.jpeg',
+    status: 'Active',
+    joiningDate: '2019-03-15',
+    enrolledAt: '2026-02-01T08:30:00Z',
+    samplePhotosCount: 5
+  },
   {
     id: 'FAC-1001',
     name: 'Dr. Ananya Sharma',
@@ -185,6 +220,26 @@ export const INITIAL_SCHEDULE: Schedule[] = [
 
 export const INITIAL_ATTENDANCE_LOGS: AttendanceLog[] = [
   {
+    id: 'LOG-9000',
+    faculty_id: 'FAC-2001',
+    date: '2026-08-18',
+    check_in_time: '08:30:12',
+    source: 'face_recognition',
+    confidence_score: 99.8,
+    camera_location: 'Main Campus Entrance Gate 1',
+    status: 'present'
+  },
+  {
+    id: 'LOG-9000B',
+    faculty_id: 'FAC-2002',
+    date: '2026-08-18',
+    check_in_time: '08:42:05',
+    source: 'face_recognition',
+    confidence_score: 99.4,
+    camera_location: 'Block III Vision Gate',
+    status: 'present'
+  },
+  {
     id: 'LOG-9001',
     faculty_id: 'FAC-1001',
     date: '2026-07-31',
@@ -244,6 +299,18 @@ export const INITIAL_USERS: User[] = [
     id: 'USR-01',
     name: 'Administrator (Dean Office)',
     role: 'admin'
+  },
+  {
+    id: 'USR-SWARNIM',
+    name: 'Prof. Swarnim Pradhan',
+    role: 'faculty',
+    linked_faculty_id: 'FAC-2001'
+  },
+  {
+    id: 'USR-STEPHEN',
+    name: 'Prof. Stephen',
+    role: 'faculty',
+    linked_faculty_id: 'FAC-2002'
   },
   {
     id: 'USR-02',

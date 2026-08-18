@@ -32,7 +32,14 @@ export function App() {
   // Persistence State
   const [facultyList, setFacultyList] = useState<Faculty[]>(() => {
     const saved = localStorage.getItem('FS_FACULTY_KB');
-    return saved ? JSON.parse(saved) : INITIAL_FACULTY;
+    if (!saved) return INITIAL_FACULTY;
+    try {
+      const parsed: Faculty[] = JSON.parse(saved);
+      const missing = INITIAL_FACULTY.filter(f => !parsed.some(p => p.id === f.id));
+      return missing.length > 0 ? [...missing, ...parsed] : parsed;
+    } catch {
+      return INITIAL_FACULTY;
+    }
   });
 
   const [schedules] = useState<Schedule[]>(INITIAL_SCHEDULE);

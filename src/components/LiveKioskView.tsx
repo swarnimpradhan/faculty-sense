@@ -6,7 +6,8 @@ import {
   CheckCircle2, 
   AlertTriangle,
   MapPin,
-  Check
+  Check,
+  Unlock
 } from 'lucide-react';
 import type { Faculty, SystemConfig } from '../types';
 import { processCameraFrame, type RecognitionResult } from '../utils/biometricsEngine';
@@ -146,32 +147,50 @@ export const LiveKioskView: React.FC<LiveKioskViewProps> = ({
 
           {/* Recognition Result Pill */}
           {recognitionResult && (
-            <div className={`p-4 rounded-2xl flex items-center justify-between border ${
+            <div className={`p-4 rounded-2xl border transition-all ${
               recognitionResult.matchFound 
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-950 shadow-md' 
                 : 'bg-rose-50 border-rose-200 text-rose-900'
             }`}>
-              <div className="flex items-center gap-3">
-                {recognitionResult.matchFound ? (
-                  <CheckCircle2 size={24} className="text-emerald-700 shrink-0" />
-                ) : (
-                  <AlertTriangle size={24} className="text-rose-700 shrink-0" />
-                )}
-                <div>
-                  <div className="font-extrabold text-sm">
-                    {recognitionResult.matchFound && recognitionResult.faculty 
-                      ? `${recognitionResult.faculty.name} Identified!` 
-                      : 'Unrecognized Face / Low Cosine Score'}
-                  </div>
-                  <div className="text-xs opacity-80">
-                    ArcFace 512-d Match Confidence: <strong>{recognitionResult.confidence}%</strong> · Liveness: <strong>PASSED</strong>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {recognitionResult.matchFound ? (
+                    <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                      <CheckCircle2 size={24} />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                      <AlertTriangle size={24} />
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-extrabold text-base flex items-center gap-2">
+                      {recognitionResult.matchFound && recognitionResult.faculty 
+                        ? `${recognitionResult.faculty.name}` 
+                        : 'Unrecognized Face / Low Cosine Score'}
+                      {recognitionResult.matchFound && (
+                        <span className="text-[11px] font-bold bg-emerald-700 text-white px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                          <Unlock size={11} /> ACCESS GRANTED
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs opacity-90 mt-0.5">
+                      ArcFace 512-d Match Confidence: <strong>{recognitionResult.confidence}%</strong> · Liveness: <strong>PASSED (Score: {recognitionResult.livenessScore})</strong>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <span className={`status-pill ${recognitionResult.matchFound ? 'green' : 'amber'}`}>
-                {recognitionResult.matchFound ? '• Match Verified' : '• Verification Flagged'}
-              </span>
+                <div className="text-right">
+                  <span className={`status-pill ${recognitionResult.matchFound ? 'green' : 'amber'}`}>
+                    {recognitionResult.matchFound ? '• Match Verified' : '• Verification Flagged'}
+                  </span>
+                  {recognitionResult.matchFound && recognitionResult.faculty && (
+                    <div className="text-[11px] text-emerald-800 font-bold mt-1">
+                      {recognitionResult.faculty.designation}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
