@@ -24,6 +24,7 @@ export const LiveKioskView: React.FC<LiveKioskViewProps> = ({
   onRecognitionSuccess,
 }) => {
   const [selectedDemoFaculty, setSelectedDemoFaculty] = useState<Faculty>(facultyList[0]);
+  const [activeAngleIndex, setActiveAngleIndex] = useState<number>(0);
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [recognitionResult, setRecognitionResult] = useState<RecognitionResult | null>(null);
   
@@ -40,7 +41,7 @@ export const LiveKioskView: React.FC<LiveKioskViewProps> = ({
         setIsWebcamActive(true);
       }
     } catch {
-      alert('Webcam stream unavailable. Using simulated live target picker on the right panel.');
+      alert('Webcam stream unavailable. Using live biometric scan viewer.');
     }
   };
 
@@ -76,6 +77,10 @@ export const LiveKioskView: React.FC<LiveKioskViewProps> = ({
   useEffect(() => {
     return () => stopWebcam();
   }, []);
+
+  const currentFaceImage = selectedDemoFaculty.avatarUrl.includes('/dataset/')
+    ? selectedDemoFaculty.avatarUrl.replace(/\d+\.jpeg/, `${activeAngleIndex + 1}.jpeg`)
+    : selectedDemoFaculty.avatarUrl;
 
   return (
     <div className="space-y-6">
@@ -130,20 +135,76 @@ export const LiveKioskView: React.FC<LiveKioskViewProps> = ({
             </div>
           </div>
 
-          <div className="video-frame-container relative">
+          <div className="video-frame-container relative min-h-[400px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-inner flex items-center justify-center">
             {isWebcamActive ? (
-              <video ref={videoRef} className="video-feed" playsInline muted />
+              <video ref={videoRef} className="video-feed w-full h-full object-cover" playsInline muted />
             ) : (
-              <div className="text-center p-12 text-slate-400 space-y-3">
-                <Camera size={44} className="mx-auto text-slate-300" />
-                <div className="text-sm font-extrabold text-slate-700">Webcam Not Streamed</div>
-                <div className="text-xs text-slate-400">Select a faculty profile on the right to simulate live CV perception scan.</div>
+              <div className="relative w-full h-full min-h-[400px] flex items-center justify-center bg-slate-950">
+                <img 
+                  src={currentFaceImage} 
+                  alt={selectedDemoFaculty.name}
+                  className="w-full h-full max-h-[420px] object-cover opacity-95 transition-all duration-300"
+                />
+
+                {/* Cybernetic HUD Target Scanning Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-[250px] h-[270px] border-2 border-emerald-400/90 rounded-2xl relative shadow-[0_0_30px_rgba(52,211,153,0.35)]">
+                    {/* Reticle Brackets */}
+                    <div className="absolute -top-1.5 -left-1.5 w-7 h-7 border-t-4 border-l-4 border-emerald-400"></div>
+                    <div className="absolute -top-1.5 -right-1.5 w-7 h-7 border-t-4 border-r-4 border-emerald-400"></div>
+                    <div className="absolute -bottom-1.5 -left-1.5 w-7 h-7 border-b-4 border-l-4 border-emerald-400"></div>
+                    <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 border-b-4 border-r-4 border-emerald-400"></div>
+
+                    {/* Facial Landmark Tracking Nodes */}
+                    <div className="absolute top-[28%] left-[26%] w-4 h-4 border-2 border-cyan-400 rounded-full flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping"></div>
+                    </div>
+                    <div className="absolute top-[28%] right-[26%] w-4 h-4 border-2 border-cyan-400 rounded-full flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping"></div>
+                    </div>
+                    <div className="absolute top-[52%] left-[48%] w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_8px_#34d399]"></div>
+                    <div className="absolute bottom-[24%] left-[36%] w-12 h-1 border-b-2 border-cyan-400 rounded-full"></div>
+
+                    {/* Active Laser Scanning Line */}
+                    {isScanning && (
+                      <div className="absolute w-full h-1.5 bg-gradient-to-r from-emerald-400 via-cyan-300 to-emerald-400 shadow-[0_0_20px_#34d399] animate-pulse top-1/2 left-0"></div>
+                    )}
+
+                    {/* HUD Status Pill */}
+                    <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-900/90 text-emerald-400 font-mono text-[11px] px-3.5 py-1.5 rounded-full border border-emerald-500/40 shadow-xl flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${isScanning ? 'bg-amber-400 animate-spin' : 'bg-emerald-400 animate-pulse'}`}></div>
+                      <span>{isScanning ? 'EXTRACTING 512-D ARCFACE VECTOR...' : `LIVE PERCEPTION: ${selectedDemoFaculty.name.toUpperCase()}`}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Simulated Canvas HUD Overlay */}
+            {/* Simulated Canvas Overlay */}
             <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none w-full h-full" />
           </div>
+
+          {/* Biometric Pose / Angle Frame Selector */}
+          {!isWebcamActive && selectedDemoFaculty.avatarUrl.includes('/dataset/') && (
+            <div className="flex items-center justify-between bg-slate-100 p-2.5 rounded-xl border border-slate-200 text-xs">
+              <span className="font-extrabold text-slate-700">Biometric Pose Frame:</span>
+              <div className="flex gap-1.5">
+                {[1, 2, 3, 4, 5].map((num, idx) => (
+                  <button
+                    key={num}
+                    onClick={() => setActiveAngleIndex(idx)}
+                    className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${
+                      activeAngleIndex === idx
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    Scan #{num}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Recognition Result Pill */}
           {recognitionResult && (
