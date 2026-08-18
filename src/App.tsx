@@ -31,23 +31,16 @@ export function App() {
 
   // Persistence State
   const [facultyList, setFacultyList] = useState<Faculty[]>(() => {
-    const saved = localStorage.getItem('FS_FACULTY_KB');
-    if (!saved) return INITIAL_FACULTY;
-    try {
-      const parsed: Faculty[] = JSON.parse(saved);
-      const missing = INITIAL_FACULTY.filter(f => !parsed.some(p => p.id === f.id));
-      return missing.length > 0 ? [...missing, ...parsed] : parsed;
-    } catch {
-      return INITIAL_FACULTY;
-    }
+    localStorage.setItem('FS_FACULTY_KB', JSON.stringify(INITIAL_FACULTY));
+    return INITIAL_FACULTY;
   });
 
   const [schedules] = useState<Schedule[]>(INITIAL_SCHEDULE);
   const [leaveRecords] = useState<LeaveRecord[]>(INITIAL_LEAVE_RECORDS);
 
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>(() => {
-    const saved = localStorage.getItem('FS_ATTENDANCE_LOGS');
-    return saved ? JSON.parse(saved) : INITIAL_ATTENDANCE_LOGS;
+    localStorage.setItem('FS_ATTENDANCE_LOGS', JSON.stringify(INITIAL_ATTENDANCE_LOGS));
+    return INITIAL_ATTENDANCE_LOGS;
   });
 
   const [config, setConfig] = useState<SystemConfig>({
