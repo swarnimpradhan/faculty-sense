@@ -6,8 +6,9 @@ import {
   CheckCircle2, 
   AlertTriangle,
   MapPin,
-  Check,
-  Unlock
+  Unlock,
+  BadgeCheck,
+  ShieldCheck
 } from 'lucide-react';
 import type { Faculty, SystemConfig } from '../types';
 import { processCameraFrame, type RecognitionResult } from '../utils/biometricsEngine';
@@ -16,14 +17,18 @@ interface LiveKioskViewProps {
   facultyList: Faculty[];
   config: SystemConfig;
   onRecognitionSuccess: (faculty: Faculty, confidence: number, location: string) => void;
+  selectedFacultyFromGallery?: Faculty | null;
 }
 
 export const LiveKioskView: React.FC<LiveKioskViewProps> = ({
   facultyList,
   config,
   onRecognitionSuccess,
+  selectedFacultyFromGallery,
 }) => {
-  const [selectedDemoFaculty, setSelectedDemoFaculty] = useState<Faculty>(facultyList[0]);
+  const [selectedDemoFaculty, setSelectedDemoFaculty] = useState<Faculty>(
+    selectedFacultyFromGallery || facultyList[0]
+  );
   const [activeAngleIndex, setActiveAngleIndex] = useState<number>(0);
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [recognitionResult, setRecognitionResult] = useState<RecognitionResult | null>(null);
@@ -31,6 +36,12 @@ export const LiveKioskView: React.FC<LiveKioskViewProps> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isWebcamActive, setIsWebcamActive] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (selectedFacultyFromGallery) {
+      setSelectedDemoFaculty(selectedFacultyFromGallery);
+    }
+  }, [selectedFacultyFromGallery]);
 
   const startWebcam = async () => {
     try {
@@ -71,7 +82,7 @@ export const LiveKioskView: React.FC<LiveKioskViewProps> = ({
       if (res.matchFound && res.faculty) {
         onRecognitionSuccess(res.faculty, res.confidence, config.cameraLocation);
       }
-    }, 700);
+    }, 650);
   };
 
   useEffect(() => {
@@ -82,302 +93,233 @@ export const LiveKioskView: React.FC<LiveKioskViewProps> = ({
     ? selectedDemoFaculty.avatarUrl.replace(/\d+\.jpeg/, `${activeAngleIndex + 1}.jpeg`)
     : selectedDemoFaculty.avatarUrl;
 
+  const RECENT_RECOGNITIONS = [
+    {
+      name: selectedDemoFaculty.name,
+      dept: selectedDemoFaculty.department,
+      role: selectedDemoFaculty.designation,
+      confidence: recognitionResult?.confidence || 99,
+      time: "Just now",
+    },
+    {
+      name: facultyList[1]?.name || "Prof. Stephen",
+      dept: facultyList[1]?.department || "Electronics & Communication",
+      role: facultyList[1]?.designation || "Associate Director",
+      confidence: 97,
+      time: "08:42 AM",
+    }
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Pulse Clinic Style Hero Greeting Banner */}
-      <div className="hero-greeting-card">
-        <div className="hero-subtitle">FACULTY HEALTH & BIOMETRICS</div>
-        <h1 className="hero-title">Hello, Admin</h1>
-        <p className="hero-description">
-          Your faculty recognition events, schedule timetables, and vector logs, in one place.
-        </p>
-
-        {/* Featured Next Appointment / Active Perception Banner */}
-        <div className="hero-featured-banner">
+    <section className="py-12 border-b border-border/70">
+      <div className="mx-auto max-w-7xl px-6 space-y-8">
+        {/* Gate Header Banner */}
+        <div className="panel p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="featured-label">ACTIVE PERCEPTION GATE</div>
-            <div className="featured-details">{config.cameraLocation} · ArcFace 512-d</div>
-            <div className="featured-subdetails">FAISS Cosine Similarity Index Threshold: {config.matchingThreshold}%</div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-0.5 text-xs font-semibold text-primary mb-2">
+              <MapPin className="size-3.5" /> Perception Gate: {config.cameraLocation}
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight">Live CV Scanner & Access Desk</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Real-time RetinaFace detection, 512-d ArcFace feature extraction, and FAISS vector matching.
+            </p>
           </div>
-          <button className="secondary-pill-btn" onClick={() => alert('Gate location updated!')}>
-            Change Gate
-          </button>
+
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={isWebcamActive ? stopWebcam : startWebcam}
+              className="flex items-center gap-2 rounded-full border border-border bg-secondary/60 px-4 py-2 text-xs font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer"
+            >
+              <Camera className="size-4" />
+              <span>{isWebcamActive ? 'Stop Webcam' : 'Start Webcam'}</span>
+            </button>
+
+            <button 
+              onClick={triggerScan}
+              disabled={isScanning}
+              className="flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground shadow-glow transition-all hover:opacity-90 disabled:opacity-50 cursor-pointer"
+            >
+              <Scan className="size-4" />
+              <span>{isScanning ? 'Extracting Vector...' : 'Trigger Perception Frame Scan'}</span>
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Main Kiosk Perception Grid */}
-      <div className="kiosk-main-layout">
-        {/* Video / Scanning Viewport */}
-        <div className="bg-white border border-slate-200 rounded-[20px] p-5 shadow-sm space-y-4">
-          <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
-              <MapPin size={14} className="text-slate-900" />
-              <span>Location: {config.cameraLocation}</span>
+        {/* Main Kiosk Perception Grid */}
+        <div className="grid gap-6 lg:grid-cols-[1.25fr_1fr]">
+          {/* Scanner Viewport */}
+          <div className="panel p-5 space-y-4">
+            <div className="video-frame-container relative min-h-[420px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-inner flex items-center justify-center">
+              {isWebcamActive ? (
+                <video ref={videoRef} className="video-feed w-full h-full object-cover" playsInline muted />
+              ) : (
+                <div className="relative w-full h-full min-h-[420px] flex items-center justify-center bg-slate-950">
+                  <img 
+                    src={currentFaceImage} 
+                    alt={selectedDemoFaculty.name}
+                    className="w-full h-full max-h-[440px] object-cover opacity-95 transition-all duration-300"
+                  />
+
+                  {/* Cybernetic HUD Target Scanning Overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-[260px] h-[280px] border-2 border-emerald-400/90 rounded-2xl relative shadow-[0_0_35px_rgba(52,211,153,0.35)]">
+                      {/* Reticle Brackets */}
+                      <div className="absolute -top-1.5 -left-1.5 w-7 h-7 border-t-4 border-l-4 border-emerald-400"></div>
+                      <div className="absolute -top-1.5 -right-1.5 w-7 h-7 border-t-4 border-r-4 border-emerald-400"></div>
+                      <div className="absolute -bottom-1.5 -left-1.5 w-7 h-7 border-b-4 border-l-4 border-emerald-400"></div>
+                      <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 border-b-4 border-r-4 border-emerald-400"></div>
+
+                      {/* Facial Landmark Tracking Nodes */}
+                      <div className="absolute top-[28%] left-[26%] w-4 h-4 border-2 border-cyan-400 rounded-full flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping"></div>
+                      </div>
+                      <div className="absolute top-[28%] right-[26%] w-4 h-4 border-2 border-cyan-400 rounded-full flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping"></div>
+                      </div>
+                      <div className="absolute top-[52%] left-[48%] w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_8px_#34d399]"></div>
+                      <div className="absolute bottom-[24%] left-[36%] w-12 h-1 border-b-2 border-cyan-400 rounded-full"></div>
+
+                      {/* Active Laser Scanning Line */}
+                      {isScanning && (
+                        <div className="absolute w-full h-1.5 bg-gradient-to-r from-emerald-400 via-cyan-300 to-emerald-400 shadow-[0_0_20px_#34d399] animate-pulse top-1/2 left-0"></div>
+                      )}
+
+                      {/* HUD Status Pill */}
+                      <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-900/90 text-emerald-400 font-mono text-[11px] px-3.5 py-1.5 rounded-full border border-emerald-500/40 shadow-xl flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${isScanning ? 'bg-amber-400 animate-spin' : 'bg-emerald-400 animate-pulse'}`}></div>
+                        <span>{isScanning ? 'EXTRACTING 512-D VECTOR...' : `LIVE PERCEPTION: ${selectedDemoFaculty.name.toUpperCase()}`}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none w-full h-full" />
             </div>
 
-            <div className="flex gap-2">
-              <button 
-                className="secondary-pill-btn"
-                onClick={isWebcamActive ? stopWebcam : startWebcam}
-              >
-                <Camera size={14} />
-                <span>{isWebcamActive ? 'Stop Webcam' : 'Start Webcam'}</span>
-              </button>
+            {/* Pose Scan Angle Selector */}
+            {!isWebcamActive && selectedDemoFaculty.avatarUrl.includes('/dataset/') && (
+              <div className="flex items-center justify-between bg-secondary/40 p-3 rounded-xl border border-border/70 text-xs">
+                <span className="font-bold text-foreground font-mono">Biometric Angle:</span>
+                <div className="flex gap-1.5">
+                  {[1, 2, 3, 4, 5].map((num, idx) => (
+                    <button
+                      key={num}
+                      onClick={() => setActiveAngleIndex(idx)}
+                      className={`px-3 py-1 rounded-lg font-mono text-[11px] font-semibold transition-all cursor-pointer ${
+                        activeAngleIndex === idx
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'bg-background text-muted-foreground border border-border hover:text-foreground'
+                      }`}
+                    >
+                      Scan #{num}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-              <button 
-                className="primary-action-pill"
-                onClick={triggerScan}
-                disabled={isScanning}
-              >
-                <Scan size={14} />
-                <span>{isScanning ? 'Extracting Vector...' : 'Trigger Perception Frame Scan'}</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="video-frame-container relative min-h-[400px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-inner flex items-center justify-center">
-            {isWebcamActive ? (
-              <video ref={videoRef} className="video-feed w-full h-full object-cover" playsInline muted />
-            ) : (
-              <div className="relative w-full h-full min-h-[400px] flex items-center justify-center bg-slate-950">
-                <img 
-                  src={currentFaceImage} 
-                  alt={selectedDemoFaculty.name}
-                  className="w-full h-full max-h-[420px] object-cover opacity-95 transition-all duration-300"
-                />
-
-                {/* Cybernetic HUD Target Scanning Overlay */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-[250px] h-[270px] border-2 border-emerald-400/90 rounded-2xl relative shadow-[0_0_30px_rgba(52,211,153,0.35)]">
-                    {/* Reticle Brackets */}
-                    <div className="absolute -top-1.5 -left-1.5 w-7 h-7 border-t-4 border-l-4 border-emerald-400"></div>
-                    <div className="absolute -top-1.5 -right-1.5 w-7 h-7 border-t-4 border-r-4 border-emerald-400"></div>
-                    <div className="absolute -bottom-1.5 -left-1.5 w-7 h-7 border-b-4 border-l-4 border-emerald-400"></div>
-                    <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 border-b-4 border-r-4 border-emerald-400"></div>
-
-                    {/* Facial Landmark Tracking Nodes */}
-                    <div className="absolute top-[28%] left-[26%] w-4 h-4 border-2 border-cyan-400 rounded-full flex items-center justify-center">
-                      <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping"></div>
+            {/* Recognition Verification Pill */}
+            {recognitionResult && (
+              <div className={`p-4 rounded-xl border transition-all ${
+                recognitionResult.matchFound 
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-foreground' 
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-900'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      recognitionResult.matchFound ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                    }`}>
+                      {recognitionResult.matchFound ? <CheckCircle2 className="size-6" /> : <AlertTriangle className="size-6" />}
                     </div>
-                    <div className="absolute top-[28%] right-[26%] w-4 h-4 border-2 border-cyan-400 rounded-full flex items-center justify-center">
-                      <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping"></div>
-                    </div>
-                    <div className="absolute top-[52%] left-[48%] w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_8px_#34d399]"></div>
-                    <div className="absolute bottom-[24%] left-[36%] w-12 h-1 border-b-2 border-cyan-400 rounded-full"></div>
-
-                    {/* Active Laser Scanning Line */}
-                    {isScanning && (
-                      <div className="absolute w-full h-1.5 bg-gradient-to-r from-emerald-400 via-cyan-300 to-emerald-400 shadow-[0_0_20px_#34d399] animate-pulse top-1/2 left-0"></div>
-                    )}
-
-                    {/* HUD Status Pill */}
-                    <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-900/90 text-emerald-400 font-mono text-[11px] px-3.5 py-1.5 rounded-full border border-emerald-500/40 shadow-xl flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${isScanning ? 'bg-amber-400 animate-spin' : 'bg-emerald-400 animate-pulse'}`}></div>
-                      <span>{isScanning ? 'EXTRACTING 512-D ARCFACE VECTOR...' : `LIVE PERCEPTION: ${selectedDemoFaculty.name.toUpperCase()}`}</span>
+                    <div>
+                      <div className="font-bold text-sm flex items-center gap-2">
+                        <span>{recognitionResult.matchFound && recognitionResult.faculty ? recognitionResult.faculty.name : 'Unrecognized Face'}</span>
+                        {recognitionResult.matchFound && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[10px] font-mono font-bold text-white uppercase">
+                            <Unlock className="size-3" /> ACCESS GRANTED
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        ArcFace 512-d Confidence: <strong>{recognitionResult.confidence}%</strong> · Liveness: <strong>PASSED (Score: {recognitionResult.livenessScore})</strong>
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
             )}
-
-            {/* Simulated Canvas Overlay */}
-            <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none w-full h-full" />
           </div>
 
-          {/* Biometric Pose / Angle Frame Selector */}
-          {!isWebcamActive && selectedDemoFaculty.avatarUrl.includes('/dataset/') && (
-            <div className="flex items-center justify-between bg-slate-100 p-2.5 rounded-xl border border-slate-200 text-xs">
-              <span className="font-extrabold text-slate-700">Biometric Pose Frame:</span>
-              <div className="flex gap-1.5">
-                {[1, 2, 3, 4, 5].map((num, idx) => (
-                  <button
-                    key={num}
-                    onClick={() => setActiveAngleIndex(idx)}
-                    className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${
-                      activeAngleIndex === idx
-                        ? 'bg-slate-900 text-white shadow-sm'
-                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    Scan #{num}
-                  </button>
+          {/* Target Faculty Picker & Live Feed */}
+          <div className="space-y-6">
+            {/* Target Picker */}
+            <div className="panel p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-border/70 pb-3">
+                <div className="flex items-center gap-2 text-sm font-bold text-foreground">
+                  <Sparkles className="size-4 text-primary" />
+                  <span>Target Faculty Picker</span>
+                </div>
+                <span className="text-[11px] font-mono text-muted-foreground">{facultyList.length} Enrolled</span>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Select an enrolled faculty profile to trigger real-time feature vector comparison.
+              </p>
+
+              <div className="space-y-2.5">
+                {facultyList.map(faculty => {
+                  const isSelected = selectedDemoFaculty.id === faculty.id;
+                  return (
+                    <div 
+                      key={faculty.id}
+                      onClick={() => setSelectedDemoFaculty(faculty)}
+                      className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center gap-3.5 ${
+                        isSelected 
+                          ? 'bg-primary text-primary-foreground border-primary shadow-sm font-semibold' 
+                          : 'bg-secondary/30 border-border/70 text-foreground hover:bg-secondary/60'
+                      }`}
+                    >
+                      <img src={faculty.avatarUrl} alt={faculty.name} className="size-11 rounded-xl object-cover border shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-xs truncate">{faculty.name}</div>
+                        <div className={`text-[11px] truncate ${isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                          {faculty.designation}
+                        </div>
+                      </div>
+                      {isSelected && <BadgeCheck className="size-5 shrink-0 text-emerald-400" />}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Recent Recognitions Feed */}
+            <div className="panel p-5 space-y-4">
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <ShieldCheck className="size-4 text-primary" />
+                <span>Recent Recognitions</span>
+              </h3>
+
+              <div className="space-y-3">
+                {RECENT_RECOGNITIONS.map((r, i) => (
+                  <div key={i} className="p-3 rounded-xl border border-border/70 bg-secondary/20 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-foreground">{r.name}</span>
+                      <span className="font-mono text-[11px] text-muted-foreground">{r.time}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                      <span>{r.role}</span>
+                      <span className="font-mono text-primary font-bold">{r.confidence}% Match</span>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
-          )}
-
-          {/* Recognition Result Pill */}
-          {recognitionResult && (
-            <div className={`p-4 rounded-2xl border transition-all ${
-              recognitionResult.matchFound 
-                ? 'bg-emerald-50 border-emerald-300 text-emerald-950 shadow-md' 
-                : 'bg-rose-50 border-rose-200 text-rose-900'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {recognitionResult.matchFound ? (
-                    <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                      <CheckCircle2 size={24} />
-                    </div>
-                  ) : (
-                    <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                      <AlertTriangle size={24} />
-                    </div>
-                  )}
-                  <div>
-                    <div className="font-extrabold text-base flex items-center gap-2">
-                      {recognitionResult.matchFound && recognitionResult.faculty 
-                        ? `${recognitionResult.faculty.name}` 
-                        : 'Unrecognized Face / Low Cosine Score'}
-                      {recognitionResult.matchFound && (
-                        <span className="text-[11px] font-bold bg-emerald-700 text-white px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                          <Unlock size={11} /> ACCESS GRANTED
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs opacity-90 mt-0.5">
-                      ArcFace 512-d Match Confidence: <strong>{recognitionResult.confidence}%</strong> · Liveness: <strong>PASSED (Score: {recognitionResult.livenessScore})</strong>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <span className={`status-pill ${recognitionResult.matchFound ? 'green' : 'amber'}`}>
-                    {recognitionResult.matchFound ? '• Match Verified' : '• Verification Flagged'}
-                  </span>
-                  {recognitionResult.matchFound && recognitionResult.faculty && (
-                    <div className="text-[11px] text-emerald-800 font-bold mt-1">
-                      {recognitionResult.faculty.designation}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right Side: Simulated Live Target Picker */}
-        <div className="bg-white border border-slate-200 rounded-[20px] p-5 shadow-sm space-y-3 flex flex-col">
-          <div className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
-            <Sparkles size={16} />
-            <span>Simulated Live Target Picker</span>
-          </div>
-          <p className="text-xs text-slate-500">
-            Click any enrolled faculty profile to trigger real-time detection & 512-d vector matching against FAISS index.
-          </p>
-
-          <div className="space-y-2 overflow-y-auto max-h-[380px] pr-1">
-            {facultyList.map(faculty => (
-              <div 
-                key={faculty.id}
-                onClick={() => setSelectedDemoFaculty(faculty)}
-                className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center gap-3 ${
-                  selectedDemoFaculty.id === faculty.id 
-                    ? 'bg-slate-900 text-white border-slate-900 shadow-sm' 
-                    : 'bg-slate-50 border-slate-200 text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <img src={faculty.avatarUrl} alt={faculty.name} className="w-10 h-10 rounded-xl object-cover" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-extrabold text-xs truncate">{faculty.name}</div>
-                  <div className={`text-[11px] truncate ${selectedDemoFaculty.id === faculty.id ? 'text-slate-300' : 'text-slate-500'}`}>
-                    {faculty.designation}
-                  </div>
-                </div>
-                {selectedDemoFaculty.id === faculty.id && (
-                  <Check size={16} className="text-white shrink-0" />
-                )}
-              </div>
-            ))}
           </div>
         </div>
       </div>
-
-      {/* Pulse Clinic Style 3-Column Cards */}
-      <div className="pulse-dashboard-grid">
-        {/* Card 1 */}
-        <div className="dash-card">
-          <div className="card-header-title">Faculty Presence Overview</div>
-          <div className="card-row-item">
-            <div>
-              <div className="row-item-title">Dr. Ananya Sharma</div>
-              <div className="row-item-sub">Check-in: 08:52 AM · Gate 1</div>
-            </div>
-            <span className="status-pill green">• On track</span>
-          </div>
-          <div className="card-row-item">
-            <div>
-              <div className="row-item-title">Dr. Vikramaditya Rao</div>
-              <div className="row-item-sub">Check-in: 09:14 AM · Block I Gate</div>
-            </div>
-            <span className="status-pill amber">• Repeat soon</span>
-          </div>
-        </div>
-
-        {/* Card 2 */}
-        <div className="dash-card">
-          <div className="card-header-title">Recent Vector Results</div>
-          <div className="card-row-item">
-            <div>
-              <div className="row-item-title">FAISS 512-d Cosine Index</div>
-              <div className="row-item-sub">Released today · inside usual range</div>
-            </div>
-            <span className="status-pill green">• Reviewed</span>
-          </div>
-          <div className="card-row-item">
-            <div>
-              <div className="row-item-title">ArcFace Model Backbone</div>
-              <div className="row-item-sub">ResNet-100 pretrained</div>
-            </div>
-            <span className="status-pill blue">• Note</span>
-          </div>
-        </div>
-
-        {/* Card 3 */}
-        <div className="dash-card">
-          <div className="card-header-title">Biometric Health & Spoof Protection</div>
-          <div className="bg-emerald-50 text-emerald-800 text-xs font-bold p-2.5 rounded-xl border border-emerald-200">
-            Up to date - next check at annual review
-          </div>
-          <div className="card-row-item">
-            <div>
-              <div className="row-item-title">Liveness Texture Analysis</div>
-              <div className="row-item-sub">98.4% Confidence Passed</div>
-            </div>
-            <span className="text-xs text-slate-500 font-semibold">12 Aug 2026</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Pulse Clinic Style Activity Stream */}
-      <div className="activity-stream-card">
-        <div className="card-header-title mb-3">Recent Activity</div>
-        <div className="activity-list">
-          <div className="activity-row">
-            <div>
-              <div className="activity-title">Biometric 512-d embedding verified for Dr. Ananya Sharma</div>
-              <div className="activity-sub">Verified at Main Campus Entrance Gate 1 before release · 08:52 AM</div>
-            </div>
-            <span className="status-pill blue">• Results</span>
-          </div>
-
-          <div className="activity-row">
-            <div>
-              <div className="activity-title">Late check-in anomaly flagged for Dr. Vikramaditya Rao</div>
-              <div className="activity-sub">Checked in at 09:14 AM vs 09:00 AM scheduled lecture start time</div>
-            </div>
-            <span className="status-pill green">• Medication</span>
-          </div>
-
-          <div className="activity-row">
-            <div>
-              <div className="activity-title">Attendance log entry #LOG-4921 synchronized to Postgres</div>
-              <div className="activity-sub">Processed by Agentic AI LangGraph passive event engine · 09:55 AM</div>
-            </div>
-            <span className="status-pill dark">• Billing</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    </section>
   );
 };
