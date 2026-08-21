@@ -10,20 +10,25 @@ interface Message {
 interface VisionAssistChatProps {
   isOpenExternal?: boolean;
   onCloseExternal?: () => void;
+  onToggleExternal?: () => void;
 }
 
 export const VisionAssistChat: React.FC<VisionAssistChatProps> = ({
   isOpenExternal,
   onCloseExternal,
+  onToggleExternal,
 }) => {
   const [internalOpen, setInternalOpen] = useState<boolean>(false);
   const isOpen = isOpenExternal !== undefined ? isOpenExternal : internalOpen;
   
-  const setOpen = (val: boolean) => {
-    if (onCloseExternal && !val) {
+  const handleToggle = () => {
+    if (onToggleExternal) {
+      onToggleExternal();
+    } else if (onCloseExternal && isOpen) {
       onCloseExternal();
+    } else {
+      setInternalOpen(prev => !prev);
     }
-    setInternalOpen(val);
   };
 
   const [messages, setMessages] = useState<Message[]>([
@@ -99,7 +104,7 @@ export const VisionAssistChat: React.FC<VisionAssistChatProps> = ({
               </p>
             </div>
             <button
-              onClick={() => setOpen(false)}
+              onClick={handleToggle}
               className="flex size-7 items-center justify-center rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               <X className="size-4" />
@@ -190,7 +195,7 @@ export const VisionAssistChat: React.FC<VisionAssistChatProps> = ({
 
       {/* Floating Toggle Button */}
       <button
-        onClick={() => setOpen(!isOpen)}
+        onClick={handleToggle}
         className="flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-glow transition-all hover:scale-105 active:scale-95 cursor-pointer relative"
       >
         {isOpen ? <X className="size-6" /> : <MessageSquare className="size-6" />}

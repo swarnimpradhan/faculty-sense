@@ -216,6 +216,7 @@ export function App() {
       <VisionAssistChat 
         isOpenExternal={isAssistantOpen}
         onCloseExternal={() => setIsAssistantOpen(false)}
+        onToggleExternal={() => setIsAssistantOpen(prev => !prev)}
       />
 
       {/* Modal Dialog for Faculty Enrollment */}
